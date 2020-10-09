@@ -1,4 +1,5 @@
 from __future__ import absolute_import
+import re
 import datetime
 import logging
 import os
@@ -60,6 +61,8 @@ port_by_scheme = {
 # Example: if Today is 2018-01-01, then RECENT_DATE should be any date on or
 # after 2016-01-01 (today - 2 years) AND before 2017-07-01 (today - 6 months)
 RECENT_DATE = datetime.date(2017, 6, 30)
+
+_CONTAINS_CONTROL_CHAR_RE = re.compile(r"[^-!#$%&'*+.^_`|~0-9a-zA-Z]")
 
 
 class DummyConnection(object):
@@ -180,6 +183,17 @@ class HTTPConnection(_HTTPConnection, object):
     def connect(self):
         conn = self._new_conn()
         self._prepare_conn(conn)
+
+    def putrequest(self, method, url, *args, **kwargs):
+        """Send a request to the server"""
+        match = _CONTAINS_CONTROL_CHAR_RE.search(method)
+        if match:
+            raise ValueError(
+                "Method cannot contain non-token characters %r (found at least %r)"
+                % (method, match.group())
+            )
+
+        return _HTTPConnection.putrequest(self, method, url, *args, **kwargs)
 
     def request_chunked(self, method, url, body=None, headers=None):
         """
