@@ -190,6 +190,8 @@ class BytesQueueBuffer:
         self._size += len(data)
 
     def get(self, n):
+        if n == 0:
+            return b""
         if not self.buffer:
             raise RuntimeError("buffer is empty")
         elif n < 0:
