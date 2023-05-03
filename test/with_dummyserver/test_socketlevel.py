@@ -42,6 +42,7 @@ import socket
 import ssl
 import sys
 import tempfile
+import zlib
 from collections import OrderedDict
 from test import (
     LONG_TIMEOUT,
@@ -1834,6 +1835,54 @@ class TestStream(SocketDummyServerTestCase):
 
             # Stream should read to the end.
             assert [b"hello, world"] == list(r.stream(None))
+
+            done_event.set()
+
+    def test_large_compressed_stream(self):
+        done_event = Event()
+        expected_total_length = 296085
+
+        def socket_handler(listener: socket.socket):
+            compress = zlib.compressobj(6, zlib.DEFLATED, 16 + zlib.MAX_WBITS)
+            data = compress.compress(b"x" * expected_total_length)
+            data += compress.flush()
+
+            sock = listener.accept()[0]
+
+            buf = b""
+            while not buf.endswith(b"\r\n\r\n"):
+                buf += sock.recv(65536)
+
+            sock.sendall(
+                b"HTTP/1.1 200 OK\r\n"
+                b"Content-Length: %d\r\n"
+                b"Content-Encoding: gzip\r\n"
+                b"\r\n" % (len(data),) + data
+            )
+
+            done_event.wait(5)
+            sock.close()
+
+        self._start_server(socket_handler)
+
+        with HTTPConnectionPool(self.host, self.port, retries=False) as pool:
+            r = pool.request("GET", "/", timeout=LONG_TIMEOUT, preload_content=False)
+
+            # Chunks must all be equal or less than 10240
+            # and only the last chunk is allowed to be smaller
+            # than 10240.
+            total_length = 0
+            chunks_smaller_than_10240 = 0
+            for chunk in r.stream(10240, decode_content=True):
+                assert 0 < len(chunk) <= 10240
+                if len(chunk) < 10240:
+                    chunks_smaller_than_10240 += 1
+                else:
+                    assert chunks_smaller_than_10240 == 0
+                total_length += len(chunk)
+
+            assert chunks_smaller_than_10240 == 1
+            assert expected_total_length == total_length
 
             done_event.set()
 
