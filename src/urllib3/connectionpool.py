@@ -36,6 +36,7 @@ from .exceptions import (
 from .packages import six
 from .packages.six.moves import queue
 from .packages.ssl_match_hostname import CertificateError
+from ._collections import HTTPHeaderDict
 from .request import RequestMethods
 from .response import HTTPResponse
 from .util.connection import is_connection_dropped
@@ -800,7 +801,11 @@ class HTTPConnectionPool(ConnectionPool, RequestMethods):
         redirect_location = redirect and response.get_redirect_location()
         if redirect_location:
             if response.status == 303:
+                # Change the method according to RFC 9110, Section 15.4.4.
                 method = "GET"
+                # And lose the body not to transfer anything sensitive.
+                body = None
+                headers = HTTPHeaderDict(headers)._prepare_for_method_change()
 
             try:
                 retries = retries.increment(method, url, response=response, _pool=self)
