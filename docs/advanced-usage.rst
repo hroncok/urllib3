@@ -52,8 +52,8 @@ multi-threaded applications.
 Streaming and IO
 ----------------
 
-When dealing with large responses it's often better to stream the response
-content::
+When dealing with responses of large or unknown length,
+it's often better to stream the response content::
 
     >>> import urllib3
     >>> http = urllib3.PoolManager()
