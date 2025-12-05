@@ -1,6 +1,15 @@
 Changes
 =======
 
+Backports
+---------
+
+- Fixed a security issue where streaming API could improperly handle highly
+  compressed HTTP content ("decompression bombs") leading to excessive resource
+  consumption even when a small amount of data was requested. Reading small
+  chunks of compressed data is safer and much more efficient now.
+
+
 1.26.18 (2023-10-17)
 --------------------
 
