@@ -671,7 +671,11 @@ class HTTPConnectionPool(ConnectionPool, RequestMethods):
             try:
                 # discard any remaining response body, the connection will be
                 # released back to the pool once the entire response is read
-                response.read()
+                response.read(
+                    # Do not spend resources decoding the content unless
+                    # decoding has already been initiated.
+                    decode_content=response._has_decoded_content,
+                )
             except (TimeoutError, HTTPException, SocketError, ProtocolError,
                     BaseSSLError, SSLError) as e:
                 pass
