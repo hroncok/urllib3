@@ -8,6 +8,9 @@ Backports
   compressed HTTP content ("decompression bombs") leading to excessive resource
   consumption even when a small amount of data was requested. Reading small
   chunks of compressed data is safer and much more efficient now.
+- Fixed a high-severity security issue where decompression-bomb safeguards of
+  the streaming API were bypassed when HTTP redirects were followed.
+  (`GHSA-38jv-5279-wg99 <https://github.com/urllib3/urllib3/security/advisories/GHSA-38jv-5279-wg99>`__)
 
 1.26.19 (2024-06-17)
 --------------------
